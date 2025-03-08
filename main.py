@@ -1,7 +1,6 @@
 import numpy as np
 import json, operator, csv 
 
-#### Modified
 from test import *
 
 MAX_SCHEDULE_DAYS = 12
