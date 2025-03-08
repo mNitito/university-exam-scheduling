@@ -87,6 +87,8 @@ class LectureHall:
         self.number = number
         self.color = color
         self.capacity = total_capacity  # ✅ Store total hall capacity
+        #self.capacity = total_capacity  # ✅ Store total seats
+        self.available_seats = total_capacity  # ✅ Track available seats
 
         color.lecture_halls.append(self)
 
@@ -99,7 +101,7 @@ class LectureHall:
             self.capacity = self.capacity[0]  # Convert it to an int
 
         return {
-            "total": int(self.capacity)  # ✅ Always return an integer
+            "total": int(self.available_seats)  # ✅ Always return an integer
         }
 
 
@@ -182,7 +184,7 @@ def build_weight_matrix():
     return graph, courses, course_index
 
 def initialize_lecture_halls(color_matrix):
-    with open('data/lecture_halls.json') as data_file:
+    with open('data/lecture__halls.json') as data_file:
         data = json.load(data_file)  # ✅ Load JSON properly
 
     lhc = []
@@ -292,18 +294,30 @@ def get_lecture_hall(max_students, sorted_list):
 
 def select_lecture_hall(no_of_students, color):
     if no_of_students > color.capacity_available():
+        print(f"WARNING: No hall can fit {no_of_students} students!")
         return {}
 
     lecture_halls = color.lecture_hall_list()
     selected_halls = {}
+    remaining_students = no_of_students  
 
     for hall in lecture_halls:
-        if hall.capacity >= no_of_students:
-            selected_halls[hall] = no_of_students  # ✅ Assign hall based on total capacity
-            return selected_halls  # ✅ Stop searching once a suitable hall is found
+        hall_capacity = hall.availability()["total"]
 
-    return {}  # ❌ If no hall has enough capacity, return empty
+        if hall_capacity > 0 and remaining_students > 0:
+            if remaining_students <= hall_capacity:  
+                selected_halls[hall] = remaining_students
+                hall.available_seats -= remaining_students
+                remaining_students = 0  
+            else:
+                selected_halls[hall] = hall_capacity  
+                remaining_students -= hall_capacity
+                hall.available_seats = 0  
 
+    if remaining_students > 0:
+        print(f"ERROR: {remaining_students} students could not be seated!")  
+
+    return selected_halls
 
 def update_lecture_hall(hall_list, course, color):
     course.assign_color(color)
