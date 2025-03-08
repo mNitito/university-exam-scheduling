@@ -142,7 +142,7 @@ def initiailize_colors(MAX_SCHEDULE_DAYS, TIME_SLOTS):
     return color_matrix
 
 def build_weight_matrix():
-    with open('data/data_course.json') as data_file:
+    with open('data/dat_course.json') as data_file:
         course_data = json.load(data_file)
 
     with open('data/mid_sem_exam_schedule.json') as data_file:
@@ -202,7 +202,7 @@ def initialize_lecture_halls(color_matrix):
     return lhc
 
 def initialize_students(course_index):
-    with open('data/data_student.json') as data_file:
+    with open('data/dat_student.json') as data_file:
         data = json.load(data_file)
 
     student_list = []
