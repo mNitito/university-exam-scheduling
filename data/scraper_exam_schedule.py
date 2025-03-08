@@ -52,7 +52,7 @@ for i in range(2, 13):
 	for j in range(1, 4):
 		courses = str(cols[j])
 		courses = courses.replace('<td>', '').replace('</td>', '').replace(' ','').split(',')
-		print len(courses)
+		print (len(courses))
 
 		day = i - 1
 		slot = j

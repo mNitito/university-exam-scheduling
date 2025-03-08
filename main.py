@@ -3,8 +3,8 @@ import json, operator, csv
 
 from test import *
 
-MAX_SCHEDULE_DAYS = 8
-TIME_SLOTS = 5
+MAX_SCHEDULE_DAYS = 12
+TIME_SLOTS = 2
 
 GAMMA = 0.5 #Change to proivde a different coloring scheme
 
@@ -22,6 +22,10 @@ class Course:
         self.lecture_hall = []
         self.old_day = old_day
         self.old_slot = old_slot
+    
+    def __repr__(self):
+        return f"Course({self.course_code}, Students: {self.no_of_students})"
+
 
     def ordered_adjacency_list(self):
         return sorted(self.adjacency_list, key = lambda course: (course.degree, course.max_adjacency), reverse = True)
@@ -30,7 +34,7 @@ class Course:
         self.color = color
 
         color.courses.append(self)
-        print "Assigned : ", self.course_code, color.day, color.slot, self.degree, self.no_of_students
+        print("Assigned : ", self.course_code, color.day, color.slot, self.degree, self.no_of_students)
         return None
 
     def get_hall_list(self):
@@ -49,11 +53,23 @@ class Color:
         self.courses = []
 
     def capacity_available(self):
-        #Returns max students that can be accomodated
         capacity = 0
-        for i in self.lecture_halls:
-            capacity += i.availability()['total']
+        for hall in self.lecture_halls:
+            hall_availability = hall.availability()  # ✅ Store return value
+
+            #print(f"DEBUG: Hall {hall.number} availability: {hall_availability}")  # ✅ Add debug print
+
+            if hall_availability is None:  # ✅ Prevent NoneType errors
+                print(f"WARNING: Hall {hall.number} returned None!")
+                continue  # Skip this hall instead of crashing
+
+            if isinstance(hall_availability["total"], list):  # ✅ Ensure total is NOT a list
+                print(f"WARNING: Hall {hall.number} returned a list instead of an int!")
+                hall_availability["total"] = hall_availability["total"][0]  # Convert to int
+
+            capacity += hall_availability.get("total", 0)  # ✅ Safe addition
         return capacity
+
 
     def lecture_hall_list(self):
 
@@ -67,47 +83,26 @@ class Color:
         return 'color %s %s' %(self.day, self.color)
 
 class LectureHall:
-    def __init__(self, number, odd_capacity, even_capacity, color):
+    def __init__(self, number, total_capacity, _, color):
         self.number = number
         self.color = color
-        
+        self.capacity = total_capacity  # ✅ Store total hall capacity
+
         color.lecture_halls.append(self)
 
-        #O implies that odd/even seats are occupied. 
-        #1 implies that odd/even seats are not occupied
-        self.odd = 1
-        self.even = 1
-
-        self.odd_capacity = odd_capacity
-        self.even_capacity = even_capacity
-
+        
     def __unicode__(self):
         return 'L%s' %(self.number)
 
     def availability(self):
-        if self.odd and self.even:
-            return {
-                "total": max(self.odd_capacity, self.even_capacity),
-                "seats": (self.odd_capacity, self.even_capacity)
-            }
+        if isinstance(self.capacity, list):  # ✅ Ensure capacity is not a list
+            self.capacity = self.capacity[0]  # Convert it to an int
 
-        elif self.odd:
-            return {
-                "total" : self.odd_capacity,
-                "seats" : (self.odd_capacity, 0)
-            }
+        return {
+            "total": int(self.capacity)  # ✅ Always return an integer
+        }
 
-        elif self.even:
-            return {
-                "total" : self.even_capacity,
-                "seats" : (0, self.even_capacity)
-            }
 
-        else:
-            return {
-                "total" : 0,
-                "seats" : (0,0)
-            }
 
 class Student:
     def __init__(self, roll_no, courses):
@@ -142,7 +137,7 @@ def initiailize_colors(MAX_SCHEDULE_DAYS, TIME_SLOTS):
     return color_matrix
 
 def build_weight_matrix():
-    with open('data/data_course.json') as data_file:
+    with open('data/dat_course.json') as data_file:
         course_data = json.load(data_file)
 
     with open('data/mid_sem_exam_schedule.json') as data_file:
@@ -152,7 +147,7 @@ def build_weight_matrix():
     courses=[]
     counter = 1
     err_courses = []
-    for course_code, students in course_data.iteritems():
+    for course_code, students in course_data.items():
         if len(students) == 0:
             continue
         try:
@@ -188,39 +183,43 @@ def build_weight_matrix():
 
 def initialize_lecture_halls(color_matrix):
     with open('data/lecture_halls.json') as data_file:
-        data = json.load(data_file)
+        data = json.load(data_file)  # ✅ Load JSON properly
 
     lhc = []
 
     for j in range(MAX_SCHEDULE_DAYS):
         for k in range(TIME_SLOTS):
             color = color_matrix[j][k]
-            for number, capacity in data.iteritems():
-                lec_hall = LectureHall(number, capacity[0], capacity[1], color)
+            for number, total_capacity in data.items():
+                if isinstance(total_capacity, list):  # ✅ If JSON mistakenly has a list, fix it
+                    total_capacity = total_capacity[0]
+
+                lec_hall = LectureHall(number, int(total_capacity), 0, color)  # ✅ Ensure integer
                 lhc.append(lec_hall)
                 color.lecture_halls.append(lec_hall)
     return lhc
 
+
 def initialize_students(course_index):
-    with open('data/data_student.json') as data_file:
+    with open('data/dat_student.json') as data_file:
         data = json.load(data_file)
 
     student_list = []
 
-    for roll, courses in data.iteritems():
+    for roll, courses in data.items():
         course_objects = []
         for i in courses:
             if i in course_index.keys():
                 course_objects.append(course_index[i])
                 #print "done"
             else:
-                print "No object for ", i
+                print ("No object for ", i)
 
 
         std = Student(roll, course_objects)
         student_list.append(std)
 
-    print std.roll_no, std.courses_enrolled
+    print(std.roll_no, std.courses_enrolled)
 
     return student_list
 def dis_1(color_1, color_2):
@@ -292,21 +291,19 @@ def get_lecture_hall(max_students, sorted_list):
     
 
 def select_lecture_hall(no_of_students, color):
-    if no_of_students> color.capacity_available():
+    if no_of_students > color.capacity_available():
         return {}
 
     lecture_halls = color.lecture_hall_list()
-    lecture_hall_dict = {}
-    for i in lecture_halls:
-        lecture_hall_dict[i]=i.availability()['seats']
-    
-    lecture_hall_tuple_list = {}
+    selected_halls = {}
 
-    for num, value in lecture_hall_dict.iteritems():
-        lecture_hall_tuple_list[(num,'o')] = value[0]
-        lecture_hall_tuple_list[(num,'e')] = value[1]
-    sorted_list = sorted(lecture_hall_tuple_list.items(), key=operator.itemgetter(1))
-    return get_lecture_hall(no_of_students, sorted_list)
+    for hall in lecture_halls:
+        if hall.capacity >= no_of_students:
+            selected_halls[hall] = no_of_students  # ✅ Assign hall based on total capacity
+            return selected_halls  # ✅ Stop searching once a suitable hall is found
+
+    return {}  # ❌ If no hall has enough capacity, return empty
+
 
 def update_lecture_hall(hall_list, course, color):
     course.assign_color(color)
@@ -314,7 +311,7 @@ def update_lecture_hall(hall_list, course, color):
 
         course.lecture_hall = hall_list
 
-        for hall, position in course.lecture_hall.iteritems():
+        for hall, position in course.lecture_hall.items():
             if position=='o':
                 hall.odd = 0
             elif position=='e':
@@ -329,7 +326,7 @@ def get_first_node_color(course, color_matrix):
             if hall_list:
                 return color_matrix[j][k], hall_list
 
-    return None
+    return None, {}
 
 def get_smallest_available_color(course, color_matrix, constraints):
     adj_list = course.adjacency_list
@@ -399,7 +396,7 @@ def schedule_exam(sorted_courses,constraints,count):
             if sorted_courses.index(course)==0 and count==0:
                 r_ab, hall_list = get_first_node_color(course, color_matrix)
                 if r_ab == None:
-                    print "No schedule is possible"
+                    print("No schedule is possible")
                     break
         
             else:
@@ -434,7 +431,7 @@ def schedule_exam(sorted_courses,constraints,count):
         for j in range(TIME_SLOTS):
             for k in color_matrix[i][j].courses:
                 alloted_courses.append(k)
-    print len(alloted_courses)
+    print(len(alloted_courses))
     unalloted_courses=list(set(sorted_courses)-set(sorted_courses).intersection(alloted_courses))
     for c in unalloted_courses:
         c.flag=1
@@ -459,16 +456,14 @@ def hard_schedule(unalloted_courses):
     return len(unalloted_courses)
 
 def output_to_csv(TIME_SLOTS, MAX_SCHEDULE_DAYS, color_matrix):
-    with open('exam_schedule.csv', 'wb') as csvfile:
-        schedule = csv.writer(csvfile, delimiter = ',')
+    with open('exam_schedule.csv', 'w', newline='') as csvfile:  # ✅ Fixed: Use 'w' instead of 'wb'
+        schedule = csv.writer(csvfile, delimiter=',')
         schedule.writerow(['Exam Schedule'])
         for i in range(MAX_SCHEDULE_DAYS):
             for j in range(TIME_SLOTS):
                 color = color_matrix[i][j]
-                color_str = ""
-                for t in color.courses:
-                    color_str+= t.course_code + ", "
-                day = "Day " + str(i+1) + " Slot " + str(j+1)
+                color_str = ", ".join([t.course_code for t in color.courses])
+                day = f"Day {i+1} Slot {j+1}"
                 schedule.writerow([day, color_str])
             schedule.writerow([])
 
@@ -476,10 +471,10 @@ if __name__ == "__main__":
 
     graph, course_list, course_index = build_weight_matrix()
     calculate_degree(graph, course_list)    
-    print "Total Courses : ", len(course_list)
+    print("Total Courses : ", len(course_list))
 
     ct = 0
-    print ct
+    print (ct)
     sorted_courses = sorted(course_list, key = lambda course: (course.degree, course.max_adjacency), reverse = True)
     deg = []
 
@@ -490,18 +485,18 @@ if __name__ == "__main__":
     lh_list = initialize_lecture_halls(color_matrix)
     no_ofunscheduled_courses=hard_schedule(sorted_courses)
     if(no_ofunscheduled_courses!=0):
-        print "Increase days or slots.",no_ofunscheduled_courses, " courses remains unscheduled"
+        print("Increase days or slots.",no_ofunscheduled_courses, " courses remains unscheduled")
         
     count=0
     num = 0
     for i in course_list:
         if i.lecture_hall:
             res = i.course_code + " :: " + "Day " + str(i.color.day) + " Slot " + str(i.color.slot) + ", Rooms :"
-            for key, val in i.lecture_hall.iteritems():
-                res+= " L" + str(key.number) + " " + val
+            for key, val in i.lecture_hall.items():
+                res+= " N" + str(key.number) + " " + str(val)
             res += " Strength: " + str(i.no_of_students)
-            print res
-    print "\n"
+            print(res) 
+    print("\n")
 
     output_to_csv(TIME_SLOTS, MAX_SCHEDULE_DAYS, color_matrix)
 
@@ -515,8 +510,8 @@ if __name__ == "__main__":
                 num+=k.no_of_students
                 alloted_courses.append(k)
                 l.append(k.course_code)
-            print "Day ", i, " Slot ", j, " : ", "Courses : ", l, "students : ", num
-    print "Total Courses : ", count
+            print( "Day ", i, " Slot ", j, " : ", "Courses : ", l, "students : ", num)
+    print("Total Courses : ", count)
 
     test_for_clash(student_list, TIME_SLOTS)
     test_constraints(student_list, TIME_SLOTS)
