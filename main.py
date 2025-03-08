@@ -3,8 +3,8 @@ import json, operator, csv
 
 from test import *
 
-MAX_SCHEDULE_DAYS = 8
-TIME_SLOTS = 5
+MAX_SCHEDULE_DAYS = 12
+TIME_SLOTS = 2
 
 GAMMA = 0.5 #Change to proivde a different coloring scheme
 
@@ -30,7 +30,7 @@ class Course:
         self.color = color
 
         color.courses.append(self)
-        print "Assigned : ", self.course_code, color.day, color.slot, self.degree, self.no_of_students
+        print("Assigned : ", self.course_code, color.day, color.slot, self.degree, self.no_of_students)
         return None
 
     def get_hall_list(self):
@@ -152,7 +152,7 @@ def build_weight_matrix():
     courses=[]
     counter = 1
     err_courses = []
-    for course_code, students in course_data.iteritems():
+    for course_code, students in course_data.items():
         if len(students) == 0:
             continue
         try:
@@ -195,7 +195,7 @@ def initialize_lecture_halls(color_matrix):
     for j in range(MAX_SCHEDULE_DAYS):
         for k in range(TIME_SLOTS):
             color = color_matrix[j][k]
-            for number, capacity in data.iteritems():
+            for number, capacity in data.items():
                 lec_hall = LectureHall(number, capacity[0], capacity[1], color)
                 lhc.append(lec_hall)
                 color.lecture_halls.append(lec_hall)
@@ -207,20 +207,20 @@ def initialize_students(course_index):
 
     student_list = []
 
-    for roll, courses in data.iteritems():
+    for roll, courses in data.items():
         course_objects = []
         for i in courses:
             if i in course_index.keys():
                 course_objects.append(course_index[i])
                 #print "done"
             else:
-                print "No object for ", i
+                print ("No object for ", i)
 
 
         std = Student(roll, course_objects)
         student_list.append(std)
 
-    print std.roll_no, std.courses_enrolled
+    print(std.roll_no, std.courses_enrolled)
 
     return student_list
 def dis_1(color_1, color_2):
@@ -302,7 +302,7 @@ def select_lecture_hall(no_of_students, color):
     
     lecture_hall_tuple_list = {}
 
-    for num, value in lecture_hall_dict.iteritems():
+    for num, value in lecture_hall_dict.items():
         lecture_hall_tuple_list[(num,'o')] = value[0]
         lecture_hall_tuple_list[(num,'e')] = value[1]
     sorted_list = sorted(lecture_hall_tuple_list.items(), key=operator.itemgetter(1))
@@ -314,7 +314,7 @@ def update_lecture_hall(hall_list, course, color):
 
         course.lecture_hall = hall_list
 
-        for hall, position in course.lecture_hall.iteritems():
+        for hall, position in course.lecture_hall.items():
             if position=='o':
                 hall.odd = 0
             elif position=='e':
@@ -399,7 +399,7 @@ def schedule_exam(sorted_courses,constraints,count):
             if sorted_courses.index(course)==0 and count==0:
                 r_ab, hall_list = get_first_node_color(course, color_matrix)
                 if r_ab == None:
-                    print "No schedule is possible"
+                    print("No schedule is possible")
                     break
         
             else:
@@ -434,7 +434,7 @@ def schedule_exam(sorted_courses,constraints,count):
         for j in range(TIME_SLOTS):
             for k in color_matrix[i][j].courses:
                 alloted_courses.append(k)
-    print len(alloted_courses)
+    print(len(alloted_courses))
     unalloted_courses=list(set(sorted_courses)-set(sorted_courses).intersection(alloted_courses))
     for c in unalloted_courses:
         c.flag=1
@@ -459,16 +459,14 @@ def hard_schedule(unalloted_courses):
     return len(unalloted_courses)
 
 def output_to_csv(TIME_SLOTS, MAX_SCHEDULE_DAYS, color_matrix):
-    with open('exam_schedule.csv', 'wb') as csvfile:
-        schedule = csv.writer(csvfile, delimiter = ',')
+    with open('exam_schedule.csv', 'w', newline='') as csvfile:  # ✅ Fixed: Use 'w' instead of 'wb'
+        schedule = csv.writer(csvfile, delimiter=',')
         schedule.writerow(['Exam Schedule'])
         for i in range(MAX_SCHEDULE_DAYS):
             for j in range(TIME_SLOTS):
                 color = color_matrix[i][j]
-                color_str = ""
-                for t in color.courses:
-                    color_str+= t.course_code + ", "
-                day = "Day " + str(i+1) + " Slot " + str(j+1)
+                color_str = ", ".join([t.course_code for t in color.courses])
+                day = f"Day {i+1} Slot {j+1}"
                 schedule.writerow([day, color_str])
             schedule.writerow([])
 
@@ -476,10 +474,10 @@ if __name__ == "__main__":
 
     graph, course_list, course_index = build_weight_matrix()
     calculate_degree(graph, course_list)    
-    print "Total Courses : ", len(course_list)
+    print("Total Courses : ", len(course_list))
 
     ct = 0
-    print ct
+    print (ct)
     sorted_courses = sorted(course_list, key = lambda course: (course.degree, course.max_adjacency), reverse = True)
     deg = []
 
@@ -490,18 +488,18 @@ if __name__ == "__main__":
     lh_list = initialize_lecture_halls(color_matrix)
     no_ofunscheduled_courses=hard_schedule(sorted_courses)
     if(no_ofunscheduled_courses!=0):
-        print "Increase days or slots.",no_ofunscheduled_courses, " courses remains unscheduled"
+        print("Increase days or slots.",no_ofunscheduled_courses, " courses remains unscheduled")
         
     count=0
     num = 0
     for i in course_list:
         if i.lecture_hall:
             res = i.course_code + " :: " + "Day " + str(i.color.day) + " Slot " + str(i.color.slot) + ", Rooms :"
-            for key, val in i.lecture_hall.iteritems():
+            for key, val in i.lecture_hall.items():
                 res+= " L" + str(key.number) + " " + val
             res += " Strength: " + str(i.no_of_students)
-            print res
-    print "\n"
+            print(res) 
+    print("\n")
 
     output_to_csv(TIME_SLOTS, MAX_SCHEDULE_DAYS, color_matrix)
 
@@ -515,8 +513,8 @@ if __name__ == "__main__":
                 num+=k.no_of_students
                 alloted_courses.append(k)
                 l.append(k.course_code)
-            print "Day ", i, " Slot ", j, " : ", "Courses : ", l, "students : ", num
-    print "Total Courses : ", count
+            print( "Day ", i, " Slot ", j, " : ", "Courses : ", l, "students : ", num)
+    print("Total Courses : ", count)
 
     test_for_clash(student_list, TIME_SLOTS)
     test_constraints(student_list, TIME_SLOTS)
